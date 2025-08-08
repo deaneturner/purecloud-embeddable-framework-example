@@ -1,4 +1,11 @@
-document.addEventListener('DOMContentLoaded',function(){
+// Add this code to handle audio resource management
+let audioPool = [];
+const MAX_AUDIO_POOL_SIZE = 10; // Adjust based on your needs
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    // Initialize the audio pool
+    initializeAudioPool();
 
     // Add WebRTC device initialization
     initializeWebRTCDevices();
@@ -6,7 +13,8 @@ document.addEventListener('DOMContentLoaded',function(){
     // Setup listener for device changes (headset plug/unplug, etc.)
     setupDeviceChangeListener();
 
-    // Rest of your existing code...
+    // Clean up audio resources when the page is unloaded
+    window.addEventListener('beforeunload', cleanupAudioResources);
 
     // Add this new function for WebRTC device handling
     function initializeWebRTCDevices() {
@@ -176,7 +184,7 @@ document.addEventListener('DOMContentLoaded',function(){
         document.body.appendChild(messageDiv);
 
         // Add event listener to the dismiss button
-        document.getElementById('dismiss-permission-message').addEventListener('click', function() {
+        document.getElementById('dismiss-permission-message').addEventListener('click', function () {
             messageDiv.remove();
         });
     }
@@ -249,7 +257,7 @@ document.addEventListener('DOMContentLoaded',function(){
     function testAudioDevice(deviceId) {
         // Try to access the selected audio device using a less strict constraint
         navigator.mediaDevices.getUserMedia({
-            audio: deviceId ? { deviceId: { ideal: deviceId } } : true
+            audio: deviceId ? {deviceId: {ideal: deviceId}} : true
         })
             .then(stream => {
                 console.log('Successfully accessed audio device');
@@ -270,7 +278,7 @@ document.addEventListener('DOMContentLoaded',function(){
                 // Notify the softphone that we have a valid device
                 document.getElementById("softphone").contentWindow.postMessage(JSON.stringify({
                     type: 'audioDeviceSelected',
-                    data: { deviceId: window.selectedAudioDeviceId }
+                    data: {deviceId: window.selectedAudioDeviceId}
                 }), "*");
             })
             .catch(err => {
@@ -284,7 +292,7 @@ document.addEventListener('DOMContentLoaded',function(){
                     // If we can't access any audio device, notify the softphone about the issue
                     document.getElementById("softphone").contentWindow.postMessage(JSON.stringify({
                         type: 'audioDeviceError',
-                        data: { error: err.name, message: err.message }
+                        data: {error: err.name, message: err.message}
                     }), "*");
                 }
             });
@@ -303,7 +311,7 @@ document.addEventListener('DOMContentLoaded',function(){
         // Notify the softphone about the device selection
         document.getElementById("softphone").contentWindow.postMessage(JSON.stringify({
             type: 'audioDeviceSelected',
-            data: { deviceId: deviceId }
+            data: {deviceId: deviceId}
         }), "*");
     }
 
@@ -320,7 +328,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
     // Update your existing functions that might need the device ID
     // For example, modify updateAudioConfiguration to include the device ID:
-    function updateAudioConfiguration(){
+    function updateAudioConfiguration() {
         console.log('Update Audio Configuration');
         var payload = {
             call: document.getElementById('audio-call').checked,
@@ -350,29 +358,29 @@ document.addEventListener('DOMContentLoaded',function(){
     document.getElementById('muteInteraction').addEventListener("click", updateInteractionState);
     document.getElementById('updateAudioConfiguration').addEventListener("click", updateAudioConfiguration);
     document.getElementById('sendCustomNotification').addEventListener("click", sendCustomNotification);
-    
+
     document.getElementById('view-interactionList').addEventListener("click", setView);
     document.getElementById('view-calllog').addEventListener("click", setView);
     document.getElementById('view-newInteraction').addEventListener("click", setView);
     document.getElementById('view-callback').addEventListener("click", setView);
     document.getElementById('view-settings').addEventListener("click", setView);
 
-    window.addEventListener("message", function(event) {
+    window.addEventListener("message", function (event) {
         var message = JSON.parse(event.data);
-        if(message){
-            if(message.type == "screenPop"){
+        if (message) {
+            if (message.type == "screenPop") {
                 document.getElementById("screenPopPayload").value = event.data;
-            } else if(message.type == "processCallLog"){
+            } else if (message.type == "processCallLog") {
                 document.getElementById("processCallLogPayLoad").value = event.data;
-            } else if(message.type == "openCallLog"){
+            } else if (message.type == "openCallLog") {
                 document.getElementById("openCallLogPayLoad").value = event.data;
-            } else if(message.type == "interactionSubscription"){
+            } else if (message.type == "interactionSubscription") {
                 document.getElementById("interactionSubscriptionPayload").value = event.data;
-            } else if(message.type == "userActionSubscription"){
+            } else if (message.type == "userActionSubscription") {
                 document.getElementById("userActionSubscriptionPayload").value = event.data;
-            } else if(message.type == "notificationSubscription"){
+            } else if (message.type == "notificationSubscription") {
                 document.getElementById("notificationSubscriptionPayload").value = event.data;
-            } else if(message.type == "contactSearch") {
+            } else if (message.type == "contactSearch") {
                 document.getElementById("searchText").innerHTML = ": " + message.data.searchString;
                 sendContactSearch();
             }
@@ -383,7 +391,7 @@ document.addEventListener('DOMContentLoaded',function(){
         console.log('process click to dial');
         document.getElementById("softphone").contentWindow.postMessage(JSON.stringify({
             type: 'clickToDial',
-            data: { number: '3172222222', autoPlace: true }
+            data: {number: '3172222222', autoPlace: true}
         }), "*");
     }
 
@@ -423,7 +431,7 @@ document.addEventListener('DOMContentLoaded',function(){
         console.log('process user status update');
         document.getElementById("softphone").contentWindow.postMessage(JSON.stringify({
             type: 'updateUserStatus',
-            data: { id:document.getElementById("statusDropDown").value }
+            data: {id: document.getElementById("statusDropDown").value}
         }), "*");
     }
 
@@ -431,9 +439,9 @@ document.addEventListener('DOMContentLoaded',function(){
         console.log('process interaction state change');
         var lastInteractionPayload = JSON.parse(document.getElementById("interactionSubscriptionPayload").value);
         var interactionId;
-        if (lastInteractionPayload.data.interaction.old){
+        if (lastInteractionPayload.data.interaction.old) {
             interactionId = lastInteractionPayload.data.interaction.old.id;
-        }else {
+        } else {
             interactionId = lastInteractionPayload.data.interaction.id;
         }
         let payload = {
@@ -446,7 +454,7 @@ document.addEventListener('DOMContentLoaded',function(){
         }), "*");
     }
 
-    function updateAudioConfiguration(){
+    function updateAudioConfiguration() {
         console.log('Update Audio Configuration');
         var payload = {
             call: document.getElementById('audio-call').checked,
@@ -466,9 +474,9 @@ document.addEventListener('DOMContentLoaded',function(){
     function setView(event) {
         console.log('process view update');
         let payload = {
-            type:"main", 
+            type: "main",
             view: {
-                name:event.target.outerText
+                name: event.target.outerText
             }
         };
         document.getElementById("softphone").contentWindow.postMessage(JSON.stringify({
@@ -477,11 +485,11 @@ document.addEventListener('DOMContentLoaded',function(){
         }), "*");
     }
 
-    function sendCustomNotification(){
+    function sendCustomNotification() {
         console.log('Send Custom User Notification');
         var payload = {
             message: document.getElementById('customNotificationMessage').value,
-            type: document.getElementById('notificationType').value,  
+            type: document.getElementById('notificationType').value,
             timeout: document.getElementById('notificationTimeout').value
         };
         document.getElementById("softphone").contentWindow.postMessage(JSON.stringify({
@@ -489,4 +497,137 @@ document.addEventListener('DOMContentLoaded',function(){
             data: payload
         }), "*");
     }
+
+// Initialize the audio pool
+    function initializeAudioPool() {
+        // Clear any existing audio elements in the pool
+        audioPool.forEach(audio => {
+            audio.onended = null;
+            audio.pause();
+            audio.src = '';
+        });
+
+        audioPool = [];
+
+        // Create a pool of reusable audio elements
+        for (let i = 0; i < MAX_AUDIO_POOL_SIZE; i++) {
+            const audio = new Audio();
+            audio.inUse = false;
+            audioPool.push(audio);
+        }
+
+        console.log('Audio pool initialized with ' + MAX_AUDIO_POOL_SIZE + ' elements');
+    }
+
+// Get an available audio element from the pool
+    function getAudioFromPool() {
+        // First try to find an unused audio element
+        let audio = audioPool.find(a => !a.inUse);
+
+        // If all are in use, find one that's not playing
+        if (!audio) {
+            audio = audioPool.find(a => a.paused || a.ended);
+
+            // If we found one, clean it up for reuse
+            if (audio) {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.src = '';
+            }
+        }
+
+        // If still no available audio, take the oldest one from the pool
+        if (!audio && audioPool.length > 0) {
+            audio = audioPool[0];
+            audio.pause();
+            audio.currentTime = 0;
+            audio.src = '';
+            console.warn('Audio pool exhausted, reusing oldest audio element');
+        }
+
+        // If we have an audio element, mark it as in use
+        if (audio) {
+            audio.inUse = true;
+        } else {
+            // Create a new one if the pool is empty (shouldn't happen)
+            audio = new Audio();
+            audio.inUse = true;
+            audioPool.push(audio);
+            console.warn('Creating new audio element outside pool');
+        }
+
+        return audio;
+    }
+
+// Release an audio element back to the pool
+    function releaseAudioToPool(audio) {
+        if (!audio) return;
+
+        // Clean up the audio element
+        audio.onended = null;
+        audio.onerror = null;
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = '';
+        audio.inUse = false;
+    }
+
+// Play a sound with proper resource management
+    function playSound(url) {
+        const audio = getAudioFromPool();
+
+        // Set up the audio to be released back to the pool when done
+        audio.onended = function () {
+            releaseAudioToPool(audio);
+        };
+
+        audio.onerror = function () {
+            console.error('Error playing audio:', url);
+            releaseAudioToPool(audio);
+        };
+
+        // Set source and play
+        audio.src = url;
+
+        // Use a promise to handle autoplay restrictions
+        const playPromise = audio.play();
+
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.error('Audio play failed:', error);
+                releaseAudioToPool(audio);
+            });
+        }
+
+        return audio;
+    }
+
+// Clean up all audio resources
+    function cleanupAudioResources() {
+        audioPool.forEach(audio => {
+            audio.onended = null;
+            audio.onerror = null;
+            audio.pause();
+            audio.src = '';
+        });
+
+        audioPool = [];
+    }
+
+// Initialize the audio pool when the page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize the audio pool
+        initializeAudioPool();
+
+        // Add WebRTC device initialization
+        initializeWebRTCDevices();
+
+        // Setup listener for device changes
+        setupDeviceChangeListener();
+
+        // Clean up audio resources when the page is unloaded
+        window.addEventListener('beforeunload', cleanupAudioResources);
+
+        // Rest of your existing code...
+    });
 })
