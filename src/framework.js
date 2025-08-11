@@ -4,7 +4,7 @@ window.Framework = {
     config: {
         name:"ExampleGitHubApp",
         clientIds: {
-            "mypurecloud.com": "e1478e9c-456e-4a0e-9156-de293563c57d",
+            "mypurecloud.com": "",
         },
         customInteractionAttributes: ['PT_URLPop', 'PT_SearchValue', 'PT_TransferContext'],
         settings: {
